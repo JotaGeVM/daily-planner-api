@@ -1,0 +1,107 @@
+package io.github.jotagevm.daily_planner_api.service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
+import io.github.jotagevm.daily_planner_api.dto.TarefaRequest;
+import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
+import io.github.jotagevm.daily_planner_api.exception.CategoriaNaoEncontrada;
+import io.github.jotagevm.daily_planner_api.exception.DiasSemanaObrigatorio;
+import io.github.jotagevm.daily_planner_api.exception.HorarioObrigatorio;
+import io.github.jotagevm.daily_planner_api.exception.TarefaNaoEncontrada;
+import io.github.jotagevm.daily_planner_api.model.Categoria;
+import io.github.jotagevm.daily_planner_api.model.Recorrencia;
+import io.github.jotagevm.daily_planner_api.model.Tarefa;
+import io.github.jotagevm.daily_planner_api.model.TipoTarefa;
+import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
+import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
+
+@Service
+public class TarefaService {
+    private final TarefaRepository tarefaRepository;
+    private final CategoriaRepository categoriaRepository;
+
+    public TarefaService(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository) {
+        this.tarefaRepository = tarefaRepository;
+        this.categoriaRepository = categoriaRepository;
+    }
+
+    private void preencherCampos(Tarefa tarefa, TarefaRequest dto) {
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+                .orElseThrow(() -> new CategoriaNaoEncontrada(
+                        "Categoria de ID " + dto.getCategoriaId() + " não encontrada"));
+        tarefa.setNome(dto.getNome());
+        tarefa.setDescricao(dto.getDescricao());
+        tarefa.setCategoria(categoria);
+        tarefa.setTipo(dto.getTipo());
+        tarefa.setRecorrencia(dto.getRecorrencia());
+        if (dto.getRecorrencia() == Recorrencia.SEMANAL
+                && (dto.getDiasSemana() == null || dto.getDiasSemana().isBlank())) {
+            throw new DiasSemanaObrigatorio("Dias da semana obrigatórios para recorrência semanal");
+        } else {
+            tarefa.setDiasSemana(dto.getDiasSemana());
+        }
+        if (dto.getTipo() == TipoTarefa.EVENTO && dto.getHoraInicio() == null) {
+            throw new HorarioObrigatorio("Horário de início obrigatório para tarefa do tipo evento");
+        } else {
+            tarefa.setHoraInicio(dto.getHoraInicio());
+        }
+        tarefa.setDuracao(dto.getDuracao());
+    }
+
+    private Tarefa converterEntidade(TarefaRequest dto) {
+        Tarefa tarefa = new Tarefa();
+        preencherCampos(tarefa, dto);
+        return tarefa;
+    }
+
+    private TarefaResponse converterDto(Tarefa tarefa) {
+        TarefaResponse dto = new TarefaResponse();
+        dto.setId(tarefa.getId());
+        dto.setNome(tarefa.getNome());
+        dto.setDescricao(tarefa.getDescricao());
+        dto.setCategoriaId(tarefa.getCategoria().getId());
+        dto.setCategoriaNome(tarefa.getCategoria().getNome());
+        dto.setTipo(tarefa.getTipo());
+        dto.setRecorrencia(tarefa.getRecorrencia());
+        dto.setDiasSemana(tarefa.getDiasSemana());
+        dto.setHoraInicio(tarefa.getHoraInicio());
+        dto.setDuracao(tarefa.getDuracao());
+
+        return dto;
+    }
+
+    public TarefaResponse salvar(TarefaRequest dto) {
+        Tarefa tarefa = tarefaRepository.save(converterEntidade(dto));
+        return converterDto(tarefa);
+    }
+
+    public List<TarefaResponse> listarTodas() {
+        return tarefaRepository.findAll().stream()
+                .map(this::converterDto)
+                .collect(Collectors.toList());
+    }
+
+    public TarefaResponse buscarPorId(Long id) {
+        return tarefaRepository.findById(id)
+                .map(this::converterDto)
+                .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
+    }
+
+    public TarefaResponse atualizar(Long id, TarefaRequest tarefaAtualizada) {
+        Tarefa tarefa = tarefaRepository.findById(id)
+                .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
+        preencherCampos(tarefa, tarefaAtualizada);
+
+        return converterDto(tarefaRepository.save(tarefa));
+    }
+
+    public void deletar(Long id) {
+        if (!tarefaRepository.existsById(id)) {
+            throw new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada");
+        }
+        tarefaRepository.deleteById(id);
+    }
+}
