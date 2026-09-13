@@ -1,13 +1,13 @@
 package io.github.jotagevm.daily_planner_api.dto;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import lombok.Data;
 
 @Data
 public class OcorrenciaResponse {
     private Long id;
-    private LocalDate data;
-    private boolean concluida;
+    private LocalDateTime dataHora;
+    private Long tarefaId;
     private String tarefaNome;
 }

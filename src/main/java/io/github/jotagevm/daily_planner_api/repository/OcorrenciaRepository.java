@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import io.github.jotagevm.daily_planner_api.model.Ocorrencia;
 
 public interface OcorrenciaRepository extends JpaRepository<Ocorrencia, Long> {
-    List<Ocorrencia> findByData(LocalDate data);
+    List<Ocorrencia> findByDataHora(LocalDate dataHora);
 
     List<Ocorrencia> findByTarefaId(Long tarefaId);
 
-    boolean existsByTarefaIdAndData(Long tarefaId, LocalDate data);
+    boolean existsByTarefaIdAndDataHora(Long tarefaId, LocalDate dataHora);
 }

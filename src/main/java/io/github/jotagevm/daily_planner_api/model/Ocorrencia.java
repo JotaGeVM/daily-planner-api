@@ -1,6 +1,6 @@
 package io.github.jotagevm.daily_planner_api.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
@@ -18,9 +18,7 @@ public class Ocorrencia {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private LocalDate data;
-
-    private boolean concluida;
+    private LocalDateTime dataHora;
 
     @ManyToOne
     @JoinColumn(name = "tarefa_id", nullable = true)

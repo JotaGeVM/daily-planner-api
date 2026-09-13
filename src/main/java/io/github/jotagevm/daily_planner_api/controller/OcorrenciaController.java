@@ -5,13 +5,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import io.github.jotagevm.daily_planner_api.dto.OcorrenciaRequest;
 import io.github.jotagevm.daily_planner_api.dto.OcorrenciaResponse;
 import io.github.jotagevm.daily_planner_api.service.OcorrenciaService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/ocorrencias")
@@ -22,10 +22,9 @@ public class OcorrenciaController {
         this.ocorrenciaService = ocorrenciaService;
     }
 
-    @GetMapping("/data/{data}")
-    public ResponseEntity<List<OcorrenciaResponse>> listarPorData(@PathVariable LocalDate data) {
-        List<OcorrenciaResponse> ocorrencia = ocorrenciaService.listarPorData(data);
-        return ResponseEntity.ok(ocorrencia);
+    @GetMapping
+    public List<OcorrenciaResponse> listarTodas() {
+        return ocorrenciaService.listarTodas();
     }
 
     @GetMapping("/tarefa/{id}")
@@ -38,13 +37,6 @@ public class OcorrenciaController {
     public ResponseEntity<OcorrenciaResponse> criar(@RequestBody @Valid OcorrenciaRequest ocorrenciaDto) {
         OcorrenciaResponse ocorrenciaSalvo = ocorrenciaService.criar(ocorrenciaDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(ocorrenciaSalvo);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<OcorrenciaResponse> marcarComoConcluida(@PathVariable Long id,
-            @RequestParam boolean concluido) {
-        OcorrenciaResponse ocorrencia = ocorrenciaService.marcarComoConcluida(id, concluido);
-        return ResponseEntity.ok(ocorrencia);
     }
 
     @DeleteMapping("/{id}")

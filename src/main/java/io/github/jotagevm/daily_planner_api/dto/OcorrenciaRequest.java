@@ -1,6 +1,6 @@
 package io.github.jotagevm.daily_planner_api.dto;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -8,9 +8,7 @@ import lombok.Data;
 @Data
 public class OcorrenciaRequest {
     @NotNull
-    private LocalDate data;
-
-    private boolean concluida;
+    private LocalDateTime dataHora;
 
     @NotNull
     private Long tarefaId;

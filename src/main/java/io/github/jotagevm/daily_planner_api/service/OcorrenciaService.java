@@ -1,6 +1,5 @@
 package io.github.jotagevm.daily_planner_api.service;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,8 +27,7 @@ public class OcorrenciaService {
     private void preencherCampos(Ocorrencia ocorrencia, OcorrenciaRequest dto) {
         Tarefa tarefa = tarefaRepository.findById(dto.getTarefaId())
                 .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + dto.getTarefaId() + " não encontrada"));
-        ocorrencia.setData(dto.getData());
-        ocorrencia.setConcluida(dto.isConcluida());
+        ocorrencia.setDataHora(dto.getDataHora());
         ocorrencia.setTarefa(tarefa);
     }
 
@@ -42,20 +40,21 @@ public class OcorrenciaService {
     private OcorrenciaResponse converterDto(Ocorrencia ocorrencia) {
         OcorrenciaResponse dto = new OcorrenciaResponse();
         dto.setId(ocorrencia.getId());
-        dto.setData(ocorrencia.getData());
-        dto.setConcluida(ocorrencia.isConcluida());
+        dto.setDataHora(ocorrencia.getDataHora());
+        dto.setTarefaId(ocorrencia.getTarefa().getId());
         dto.setTarefaNome(ocorrencia.getTarefa().getNome());
 
         return dto;
     }
 
     public OcorrenciaResponse criar(OcorrenciaRequest dto) {
-        Ocorrencia ocorrencia = ocorrenciaRepository.save(converterEntidade(dto));
-        return converterDto(ocorrencia);
+        Ocorrencia ocorrencia = converterEntidade(dto);
+        Ocorrencia salva = ocorrenciaRepository.save(ocorrencia);
+        return converterDto(salva);
     }
 
-    public List<OcorrenciaResponse> listarPorData(LocalDate data) {
-        return ocorrenciaRepository.findByData(data).stream()
+    public List<OcorrenciaResponse> listarTodas() {
+        return ocorrenciaRepository.findAll().stream()
                 .map(this::converterDto)
                 .collect(Collectors.toList());
     }
@@ -64,14 +63,6 @@ public class OcorrenciaService {
         return ocorrenciaRepository.findByTarefaId(id).stream()
                 .map(this::converterDto)
                 .collect(Collectors.toList());
-    }
-
-    public OcorrenciaResponse marcarComoConcluida(Long id, boolean concluida) {
-        Ocorrencia ocorrencia = ocorrenciaRepository.findById(id)
-                .orElseThrow(() -> new OcorrenciaNaoEncontrada("Ocorrência de ID " + id + " não encontrada"));
-        ocorrencia.setConcluida(concluida);
-
-        return converterDto(ocorrenciaRepository.save(ocorrencia));
     }
 
     public void deletar(Long id) {
