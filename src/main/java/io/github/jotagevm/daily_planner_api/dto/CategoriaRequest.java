@@ -8,6 +8,8 @@ public class CategoriaRequest {
     @NotBlank
     private String nome;
 
+    private String descricao;
+
     @NotBlank
     private String corHex;
 }

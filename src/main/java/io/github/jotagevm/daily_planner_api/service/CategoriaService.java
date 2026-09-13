@@ -26,6 +26,7 @@ public class CategoriaService {
 
     private void preencherCampos(Categoria categoria, CategoriaRequest dto) {
         categoria.setNome(dto.getNome());
+        categoria.setDescricao(dto.getDescricao());
         categoria.setCorHex(dto.getCorHex());
     }
 
@@ -39,6 +40,7 @@ public class CategoriaService {
         CategoriaResponse dto = new CategoriaResponse();
         dto.setId(categoria.getId());
         dto.setNome(categoria.getNome());
+        dto.setDescricao(categoria.getDescricao());
         dto.setCorHex(categoria.getCorHex());
 
         return dto;
