@@ -19,6 +19,18 @@ public class GlobalExceptionHandler {
                 .body(new ErroResposta(HttpStatus.CONFLICT.value(), ex.getMessage(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(EmailJaCadastrado.class)
+    public ResponseEntity<ErroResposta> handleEmailJaCadastrado(EmailJaCadastrado ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT.value())
+                .body(new ErroResposta(HttpStatus.CONFLICT.value(), ex.getMessage(), LocalDateTime.now()));
+    }
+
+    @ExceptionHandler(CredenciaisInvalidas.class)
+    public ResponseEntity<ErroResposta> handleCredenciaisInvalidas(CredenciaisInvalidas ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED.value())
+                .body(new ErroResposta(HttpStatus.UNAUTHORIZED.value(), ex.getMessage(), LocalDateTime.now()));
+    }
+
     @ExceptionHandler(CategoriaNaoEncontrada.class)
     public ResponseEntity<ErroResposta> handleCategoriaNaoEncontrada(CategoriaNaoEncontrada ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND.value())
