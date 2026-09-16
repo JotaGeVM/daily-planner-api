@@ -39,4 +39,8 @@ public class Tarefa {
 
     @Column(nullable = true)
     private Integer duracao;
+
+    @ManyToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
 }

@@ -18,23 +18,20 @@ import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
 public class OcorrenciaService {
     private final OcorrenciaRepository ocorrenciaRepository;
     private final TarefaRepository tarefaRepository;
+    private final UsuarioAtualProvider usuarioAtualProvider;
 
-    public OcorrenciaService(OcorrenciaRepository ocorrenciaRepository, TarefaRepository tarefaRepository) {
+    public OcorrenciaService(OcorrenciaRepository ocorrenciaRepository, TarefaRepository tarefaRepository,
+            UsuarioAtualProvider usuarioAtualProvider) {
         this.ocorrenciaRepository = ocorrenciaRepository;
         this.tarefaRepository = tarefaRepository;
+        this.usuarioAtualProvider = usuarioAtualProvider;
     }
 
-    private void preencherCampos(Ocorrencia ocorrencia, OcorrenciaRequest dto) {
-        Tarefa tarefa = tarefaRepository.findById(dto.getTarefaId())
+    private void preencherCampos(Ocorrencia ocorrencia, OcorrenciaRequest dto, Long usuarioId) {
+        Tarefa tarefa = tarefaRepository.findByIdAndUsuarioId(dto.getTarefaId(), usuarioId)
                 .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + dto.getTarefaId() + " não encontrada"));
         ocorrencia.setDataHora(dto.getDataHora());
         ocorrencia.setTarefa(tarefa);
-    }
-
-    private Ocorrencia converterEntidade(OcorrenciaRequest dto) {
-        Ocorrencia ocorrencia = new Ocorrencia();
-        preencherCampos(ocorrencia, dto);
-        return ocorrencia;
     }
 
     private OcorrenciaResponse converterDto(Ocorrencia ocorrencia) {
@@ -48,27 +45,30 @@ public class OcorrenciaService {
     }
 
     public OcorrenciaResponse criar(OcorrenciaRequest dto) {
-        Ocorrencia ocorrencia = converterEntidade(dto);
-        Ocorrencia salva = ocorrenciaRepository.save(ocorrencia);
-        return converterDto(salva);
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        Ocorrencia ocorrencia = new Ocorrencia();
+        preencherCampos(ocorrencia, dto, usuarioId);
+        return converterDto(ocorrenciaRepository.save(ocorrencia));
     }
 
     public List<OcorrenciaResponse> listarTodas() {
-        return ocorrenciaRepository.findAll().stream()
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        return ocorrenciaRepository.findByTarefa_UsuarioId(usuarioId).stream()
                 .map(this::converterDto)
                 .collect(Collectors.toList());
     }
 
     public List<OcorrenciaResponse> listarPorTarefa(Long id) {
-        return ocorrenciaRepository.findByTarefaId(id).stream()
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        return ocorrenciaRepository.findByTarefaIdAndTarefa_UsuarioId(id, usuarioId).stream()
                 .map(this::converterDto)
                 .collect(Collectors.toList());
     }
 
     public void deletar(Long id) {
-        if (!ocorrenciaRepository.existsById(id)) {
-            throw new OcorrenciaNaoEncontrada("Ocorrência de ID " + id + " não encontrada");
-        }
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        ocorrenciaRepository.findByIdAndTarefa_UsuarioId(id, usuarioId)
+                .orElseThrow(() -> new OcorrenciaNaoEncontrada("Ocorrência de ID " + id + " não encontrada"));
         ocorrenciaRepository.deleteById(id);
     }
 }

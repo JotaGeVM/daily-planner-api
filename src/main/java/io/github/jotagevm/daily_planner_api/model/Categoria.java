@@ -21,4 +21,8 @@ public class Categoria {
     private String descricao;
 
     private String corHex;
+
+    @ManyToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
 }

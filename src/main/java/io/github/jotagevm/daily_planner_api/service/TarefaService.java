@@ -15,6 +15,7 @@ import io.github.jotagevm.daily_planner_api.model.Categoria;
 import io.github.jotagevm.daily_planner_api.model.Recorrencia;
 import io.github.jotagevm.daily_planner_api.model.Tarefa;
 import io.github.jotagevm.daily_planner_api.model.TipoTarefa;
+import io.github.jotagevm.daily_planner_api.model.Usuario;
 import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
 import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
 
@@ -22,14 +23,17 @@ import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
 public class TarefaService {
     private final TarefaRepository tarefaRepository;
     private final CategoriaRepository categoriaRepository;
+    private final UsuarioAtualProvider usuarioAtualProvider;
 
-    public TarefaService(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository) {
+    public TarefaService(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository,
+            UsuarioAtualProvider usuarioAtualProvider) {
         this.tarefaRepository = tarefaRepository;
         this.categoriaRepository = categoriaRepository;
+        this.usuarioAtualProvider = usuarioAtualProvider;
     }
 
-    private void preencherCampos(Tarefa tarefa, TarefaRequest dto) {
-        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+    private void preencherCampos(Tarefa tarefa, TarefaRequest dto, Long usuarioId) {
+        Categoria categoria = categoriaRepository.findByIdAndUsuarioId(dto.getCategoriaId(), usuarioId)
                 .orElseThrow(() -> new CategoriaNaoEncontrada(
                         "Categoria de ID " + dto.getCategoriaId() + " não encontrada"));
         tarefa.setNome(dto.getNome());
@@ -51,12 +55,6 @@ public class TarefaService {
         tarefa.setDuracao(dto.getDuracao());
     }
 
-    private Tarefa converterEntidade(TarefaRequest dto) {
-        Tarefa tarefa = new Tarefa();
-        preencherCampos(tarefa, dto);
-        return tarefa;
-    }
-
     private TarefaResponse converterDto(Tarefa tarefa) {
         TarefaResponse dto = new TarefaResponse();
         dto.setId(tarefa.getId());
@@ -74,34 +72,40 @@ public class TarefaService {
     }
 
     public TarefaResponse salvar(TarefaRequest dto) {
-        Tarefa tarefa = tarefaRepository.save(converterEntidade(dto));
-        return converterDto(tarefa);
+        Usuario usuario = usuarioAtualProvider.obterUsuarioAtual();
+        Tarefa tarefa = new Tarefa();
+        preencherCampos(tarefa, dto, usuario.getId());
+        tarefa.setUsuario(usuario);
+        return converterDto(tarefaRepository.save(tarefa));
     }
 
     public List<TarefaResponse> listarTodas() {
-        return tarefaRepository.findAll().stream()
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        return tarefaRepository.findByUsuarioId(usuarioId).stream()
                 .map(this::converterDto)
                 .collect(Collectors.toList());
     }
 
     public TarefaResponse buscarPorId(Long id) {
-        return tarefaRepository.findById(id)
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        return tarefaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .map(this::converterDto)
                 .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
     }
 
     public TarefaResponse atualizar(Long id, TarefaRequest tarefaAtualizada) {
-        Tarefa tarefa = tarefaRepository.findById(id)
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        Tarefa tarefa = tarefaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
-        preencherCampos(tarefa, tarefaAtualizada);
+        preencherCampos(tarefa, tarefaAtualizada, usuarioId);
 
         return converterDto(tarefaRepository.save(tarefa));
     }
 
     public void deletar(Long id) {
-        if (!tarefaRepository.existsById(id)) {
-            throw new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada");
-        }
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        tarefaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
         tarefaRepository.deleteById(id);
     }
 }

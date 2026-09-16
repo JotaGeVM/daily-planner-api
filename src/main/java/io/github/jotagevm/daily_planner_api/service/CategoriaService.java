@@ -11,6 +11,7 @@ import io.github.jotagevm.daily_planner_api.exception.CategoriaEmUso;
 import io.github.jotagevm.daily_planner_api.exception.CategoriaJaCadastrada;
 import io.github.jotagevm.daily_planner_api.exception.CategoriaNaoEncontrada;
 import io.github.jotagevm.daily_planner_api.model.Categoria;
+import io.github.jotagevm.daily_planner_api.model.Usuario;
 import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
 import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
 
@@ -18,10 +19,13 @@ import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
 public class CategoriaService {
     private final TarefaRepository tarefaRepository;
     private final CategoriaRepository categoriaRepository;
+    private final UsuarioAtualProvider usuarioAtualProvider;
 
-    public CategoriaService(CategoriaRepository categoriaRepository, TarefaRepository tarefaRepository) {
+    public CategoriaService(CategoriaRepository categoriaRepository, TarefaRepository tarefaRepository,
+            UsuarioAtualProvider usuarioAtualProvider) {
         this.categoriaRepository = categoriaRepository;
         this.tarefaRepository = tarefaRepository;
+        this.usuarioAtualProvider = usuarioAtualProvider;
     }
 
     private void preencherCampos(Categoria categoria, CategoriaRequest dto) {
@@ -47,27 +51,33 @@ public class CategoriaService {
     }
 
     public CategoriaResponse criar(CategoriaRequest dto) {
-        if (categoriaRepository.existsByNome(dto.getNome())) {
+        Usuario usuario = usuarioAtualProvider.obterUsuarioAtual();
+
+        if (categoriaRepository.existsByNomeAndUsuarioId(dto.getNome(), usuario.getId())) {
             throw new CategoriaJaCadastrada("Categoria com nome '" + dto.getNome() + "' já cadastrada");
         }
-        Categoria categoria = categoriaRepository.save(converterEntidade(dto));
-        return converterDto(categoria);
+        Categoria categoria = converterEntidade(dto);
+        categoria.setUsuario(usuario);
+        return converterDto(categoriaRepository.save(categoria));
     }
 
     public List<CategoriaResponse> listarTodas() {
-        return categoriaRepository.findAll().stream()
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        return categoriaRepository.findByUsuarioId(usuarioId).stream()
                 .map(this::converterDto)
                 .collect(Collectors.toList());
     }
 
     public CategoriaResponse buscarPorId(Long id) {
-        return categoriaRepository.findById(id)
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        return categoriaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .map(this::converterDto)
                 .orElseThrow(() -> new CategoriaNaoEncontrada("Categoria de ID " + id + " não encontrada"));
     }
 
     public CategoriaResponse atualizar(Long id, CategoriaRequest categoriaAtualizada) {
-        Categoria categoria = categoriaRepository.findById(id)
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        Categoria categoria = categoriaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new CategoriaNaoEncontrada("Categoria de ID " + id + " não encontrada"));
         preencherCampos(categoria, categoriaAtualizada);
 
@@ -75,10 +85,11 @@ public class CategoriaService {
     }
 
     public void deletar(Long id) {
-        if (!categoriaRepository.existsById(id)) {
-            throw new CategoriaNaoEncontrada("Categoria de ID " + id + " não encontrada");
-        }
-        if (!tarefaRepository.findByCategoriaId(id).isEmpty()) {
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        categoriaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new CategoriaNaoEncontrada("Categoria de ID " + id + " não encontrada"));
+
+        if (!tarefaRepository.findByCategoriaIdAndUsuarioId(id, usuarioId).isEmpty()) {
             throw new CategoriaEmUso("Categoria de ID " + id + " possui tarefas vinculadas e não pode ser removida");
         }
         categoriaRepository.deleteById(id);
