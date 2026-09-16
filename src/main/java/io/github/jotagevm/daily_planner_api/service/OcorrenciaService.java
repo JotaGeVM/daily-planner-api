@@ -5,6 +5,9 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import io.github.jotagevm.daily_planner_api.dto.OcorrenciaRequest;
 import io.github.jotagevm.daily_planner_api.dto.OcorrenciaResponse;
 import io.github.jotagevm.daily_planner_api.exception.OcorrenciaNaoEncontrada;
@@ -51,11 +54,9 @@ public class OcorrenciaService {
         return converterDto(ocorrenciaRepository.save(ocorrencia));
     }
 
-    public List<OcorrenciaResponse> listarTodas() {
+    public Page<OcorrenciaResponse> listarTodas(Pageable pageable) {
         Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
-        return ocorrenciaRepository.findByTarefa_UsuarioId(usuarioId).stream()
-                .map(this::converterDto)
-                .collect(Collectors.toList());
+        return ocorrenciaRepository.findByTarefa_UsuarioId(usuarioId, pageable).map(this::converterDto);
     }
 
     public List<OcorrenciaResponse> listarPorTarefa(Long id) {

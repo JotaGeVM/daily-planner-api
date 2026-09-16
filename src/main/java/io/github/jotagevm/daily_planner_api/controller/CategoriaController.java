@@ -9,8 +9,6 @@ import io.github.jotagevm.daily_planner_api.service.CategoriaService;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +17,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/categorias")
@@ -30,8 +32,9 @@ public class CategoriaController {
     }
 
     @GetMapping
-    public List<CategoriaResponse> listarTodas() {
-        return categoriaService.listarTodas();
+    public Page<CategoriaResponse> listarTodas(
+            @PageableDefault(size = 50, sort = "nome") Pageable pageable) {
+        return categoriaService.listarTodas(pageable);
     }
 
     @GetMapping("/{id}")

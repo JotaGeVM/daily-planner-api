@@ -1,9 +1,9 @@
 package io.github.jotagevm.daily_planner_api.service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import io.github.jotagevm.daily_planner_api.dto.TarefaRequest;
 import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
@@ -79,11 +79,10 @@ public class TarefaService {
         return converterDto(tarefaRepository.save(tarefa));
     }
 
-    public List<TarefaResponse> listarTodas() {
+    public Page<TarefaResponse> listarTodas(Pageable pageable) {
         Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
-        return tarefaRepository.findByUsuarioId(usuarioId).stream()
-                .map(this::converterDto)
-                .collect(Collectors.toList());
+        return tarefaRepository.findByUsuarioId(usuarioId, pageable)
+                .map(this::converterDto);
     }
 
     public TarefaResponse buscarPorId(Long id) {

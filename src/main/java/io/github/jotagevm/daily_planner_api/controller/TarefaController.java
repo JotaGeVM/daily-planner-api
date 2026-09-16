@@ -1,15 +1,14 @@
 package io.github.jotagevm.daily_planner_api.controller;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 
 import io.github.jotagevm.daily_planner_api.dto.TarefaRequest;
 import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
 import io.github.jotagevm.daily_planner_api.service.TarefaService;
 
 import jakarta.validation.Valid;
-
-import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +18,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/tarefas")
@@ -30,8 +31,9 @@ public class TarefaController {
     }
 
     @GetMapping()
-    public List<TarefaResponse> listarTodos() {
-        return tarefaService.listarTodas();
+    public Page<TarefaResponse> listarTodos(
+            @PageableDefault(size = 50, sort = "nome") Pageable pageable) {
+        return tarefaService.listarTodas(pageable);
     }
 
     @GetMapping("/{id}")

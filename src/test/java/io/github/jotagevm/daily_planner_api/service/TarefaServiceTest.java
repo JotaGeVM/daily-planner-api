@@ -14,12 +14,17 @@ import io.github.jotagevm.daily_planner_api.exception.TarefaNaoEncontrada;
 import io.github.jotagevm.daily_planner_api.model.*;
 import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
 import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,8 +33,17 @@ class TarefaServiceTest {
     private TarefaRepository tarefaRepository;
     @Mock
     private CategoriaRepository categoriaRepository;
+    @Mock
+    private UsuarioAtualProvider usuarioAtualProvider;
     @InjectMocks
     private TarefaService tarefaService;
+
+    private Usuario usuarioFake() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        usuario.setEmail("teste@exemplo.com");
+        return usuario;
+    }
 
     private Categoria categoriaFake() {
         Categoria categoria = new Categoria();
@@ -50,6 +64,7 @@ class TarefaServiceTest {
 
     @Test
     void salvarTarefaComSucesso() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         TarefaRequest request = requestValido();
         Categoria categoria = categoriaFake();
         Tarefa tarefaSalva = new Tarefa();
@@ -59,7 +74,7 @@ class TarefaServiceTest {
         tarefaSalva.setCategoria(categoria);
         tarefaSalva.setTipo(TipoTarefa.TAREFA);
         tarefaSalva.setRecorrencia(Recorrencia.NENHUMA);
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoria));
+        when(categoriaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(categoria));
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
         TarefaResponse resultado = tarefaService.salvar(request);
         assertThat(resultado.getId()).isEqualTo(10L);
@@ -68,65 +83,75 @@ class TarefaServiceTest {
 
     @Test
     void idCategoriaNaoEncontrada() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         TarefaRequest request = requestValido();
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.empty());
+        when(categoriaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> tarefaService.salvar(request)).isInstanceOf(CategoriaNaoEncontrada.class);
         verify(tarefaRepository, never()).save(any());
     }
 
     @Test
     void recorrenciaSemanalSemDiasSemana() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         TarefaRequest request = requestValido();
         request.setRecorrencia(Recorrencia.SEMANAL);
         request.setDiasSemana(null);
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoriaFake()));
+        when(categoriaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(categoriaFake()));
         assertThatThrownBy(() -> tarefaService.salvar(request)).isInstanceOf(DiasSemanaObrigatorio.class);
         verify(tarefaRepository, never()).save(any());
     }
 
     @Test
     void eventoSemHoraInicio() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         TarefaRequest request = requestValido();
         request.setTipo(TipoTarefa.EVENTO);
         request.setHoraInicio(null);
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoriaFake()));
+        when(categoriaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(categoriaFake()));
         assertThatThrownBy(() -> tarefaService.salvar(request)).isInstanceOf(HorarioObrigatorio.class);
         verify(tarefaRepository, never()).save(any());
     }
 
     @Test
     void buscarIdTarefaComSucesso() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         Tarefa tarefa = new Tarefa();
         tarefa.setId(1L);
         tarefa.setNome("Reunião");
         tarefa.setCategoria(categoriaFake());
-        when(tarefaRepository.findById(1L)).thenReturn(Optional.of(tarefa));
+        when(tarefaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(tarefa));
         TarefaResponse resultado = tarefaService.buscarPorId(1L);
         assertThat(resultado.getNome()).isEqualTo("Reunião");
     }
 
     @Test
     void buscarIdTarefaInexistente() {
-        when(tarefaRepository.findById(99L)).thenReturn(Optional.empty());
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        when(tarefaRepository.findByIdAndUsuarioId(99L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> tarefaService.buscarPorId(99L)).isInstanceOf(TarefaNaoEncontrada.class);
     }
 
     @Test
     void deletarIdTarefaComSucesso() {
-        when(tarefaRepository.existsById(1L)).thenReturn(true);
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        Tarefa tarefa = new Tarefa();
+        tarefa.setId(1L);
+        when(tarefaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(tarefa));
         tarefaService.deletar(1L);
         verify(tarefaRepository).deleteById(1L);
     }
 
     @Test
     void deletarIdTarefaInexistente() {
-        when(tarefaRepository.existsById(99L)).thenReturn(false);
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        when(tarefaRepository.findByIdAndUsuarioId(99L, 1L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> tarefaService.deletar(99L)).isInstanceOf(TarefaNaoEncontrada.class);
         verify(tarefaRepository, never()).deleteById(any());
     }
 
     @Test
     void listarTodasTarefas() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         Tarefa tarefa1 = new Tarefa();
         tarefa1.setId(1L);
         tarefa1.setNome("Tarefa 1");
@@ -135,13 +160,15 @@ class TarefaServiceTest {
         tarefa2.setId(2L);
         tarefa2.setNome("Tarefa 2");
         tarefa2.setCategoria(categoriaFake());
-        when(tarefaRepository.findAll()).thenReturn(List.of(tarefa1, tarefa2));
-        List<TarefaResponse> resultado = tarefaService.listarTodas();
-        assertThat(resultado).hasSize(2);
+        Page<Tarefa> pagina = new PageImpl<>(List.of(tarefa1, tarefa2));
+        when(tarefaRepository.findByUsuarioId(eq(1L), any(Pageable.class))).thenReturn(pagina);
+        Page<TarefaResponse> resultado = tarefaService.listarTodas(PageRequest.of(0, 50));
+        assertThat(resultado.getContent()).hasSize(2);
     }
 
     @Test
     void salvarTarefaSemanalComDiasSemana() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         TarefaRequest request = requestValido();
         request.setRecorrencia(Recorrencia.SEMANAL);
         request.setDiasSemana("SEGUNDA,QUARTA");
@@ -149,7 +176,7 @@ class TarefaServiceTest {
         tarefaSalva.setId(10L);
         tarefaSalva.setCategoria(categoriaFake());
         tarefaSalva.setDiasSemana("SEGUNDA,QUARTA");
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoriaFake()));
+        when(categoriaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(categoriaFake()));
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
         TarefaResponse resultado = tarefaService.salvar(request);
         assertThat(resultado.getDiasSemana()).isEqualTo("SEGUNDA,QUARTA");
@@ -157,6 +184,7 @@ class TarefaServiceTest {
 
     @Test
     void salvarEventoComHoraInicio() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
         TarefaRequest request = requestValido();
         request.setTipo(TipoTarefa.EVENTO);
         request.setHoraInicio(LocalTime.of(14, 30));
@@ -165,7 +193,7 @@ class TarefaServiceTest {
         tarefaSalva.setCategoria(categoriaFake());
         tarefaSalva.setTipo(TipoTarefa.EVENTO);
         tarefaSalva.setHoraInicio(LocalTime.of(14, 30));
-        when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoriaFake()));
+        when(categoriaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(categoriaFake()));
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
         TarefaResponse resultado = tarefaService.salvar(request);
         assertThat(resultado.getHoraInicio()).isEqualTo(LocalTime.of(14, 30));

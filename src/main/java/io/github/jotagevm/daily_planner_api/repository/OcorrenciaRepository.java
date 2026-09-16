@@ -6,6 +6,9 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import io.github.jotagevm.daily_planner_api.model.Ocorrencia;
 
 public interface OcorrenciaRepository extends JpaRepository<Ocorrencia, Long> {
@@ -15,7 +18,7 @@ public interface OcorrenciaRepository extends JpaRepository<Ocorrencia, Long> {
 
     boolean existsByTarefaIdAndDataHora(Long tarefaId, LocalDate dataHora);
 
-    List<Ocorrencia> findByTarefa_UsuarioId(Long usuarioId);
+    Page<Ocorrencia> findByTarefa_UsuarioId(Long usuarioId, Pageable pageable);
 
     List<Ocorrencia> findByTarefaIdAndTarefa_UsuarioId(Long tarefaId, Long usuarioId);
 

@@ -5,6 +5,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+
 import java.util.List;
 
 import io.github.jotagevm.daily_planner_api.dto.OcorrenciaRequest;
@@ -23,8 +27,9 @@ public class OcorrenciaController {
     }
 
     @GetMapping
-    public List<OcorrenciaResponse> listarTodas() {
-        return ocorrenciaService.listarTodas();
+    public Page<OcorrenciaResponse> listarTodas(
+            @PageableDefault(size = 50, sort = "dataHora") Pageable pageable) {
+        return ocorrenciaService.listarTodas(pageable);
     }
 
     @GetMapping("/tarefa/{id}")

@@ -2,6 +2,9 @@ package io.github.jotagevm.daily_planner_api.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import io.github.jotagevm.daily_planner_api.model.Recorrencia;
 import io.github.jotagevm.daily_planner_api.model.Tarefa;
 
@@ -19,7 +22,7 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
 
     List<Tarefa> findByRecorrencia(Recorrencia recorrencia);
 
-    List<Tarefa> findByUsuarioId(Long usuarioId);
+    Page<Tarefa> findByUsuarioId(Long usuarioId, Pageable pageable);
 
     Optional<Tarefa> findByIdAndUsuarioId(Long id, Long usuarioId);
 }

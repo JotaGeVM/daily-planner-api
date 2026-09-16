@@ -5,6 +5,9 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import io.github.jotagevm.daily_planner_api.model.Categoria;
 
 public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
@@ -17,4 +20,6 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
     List<Categoria> findByUsuarioId(Long usuarioId);
 
     Optional<Categoria> findByIdAndUsuarioId(Long id, Long usuarioId);
+
+    Page<Categoria> findByUsuarioId(Long usuarioId, Pageable pageable);
 }
