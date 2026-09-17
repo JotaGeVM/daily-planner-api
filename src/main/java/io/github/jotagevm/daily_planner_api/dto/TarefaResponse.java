@@ -19,4 +19,5 @@ public class TarefaResponse {
     private String diasSemana;
     private LocalTime horaInicio;
     private Integer duracao;
+    private Integer metaDiaria;
 }

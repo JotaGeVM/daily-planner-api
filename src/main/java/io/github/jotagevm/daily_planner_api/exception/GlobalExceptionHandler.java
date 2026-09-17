@@ -80,4 +80,10 @@ public class GlobalExceptionHandler {
                 .body(new ErroResposta(HttpStatus.BAD_REQUEST.value(), "Corpo da requisição inválido ou malformado",
                         LocalDateTime.now()));
     }
+
+    @ExceptionHandler(MetaDiariaObrigatoria.class)
+    public ResponseEntity<ErroResposta> handleMetaDiariaObrigatoria(MetaDiariaObrigatoria ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST.value())
+                .body(new ErroResposta(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), LocalDateTime.now()));
+    }
 }

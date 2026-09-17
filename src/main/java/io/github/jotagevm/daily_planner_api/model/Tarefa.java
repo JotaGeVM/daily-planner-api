@@ -40,6 +40,8 @@ public class Tarefa {
     @Column(nullable = true)
     private Integer duracao;
 
+    private Integer metaDiaria;
+
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;

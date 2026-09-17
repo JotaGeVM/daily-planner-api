@@ -31,4 +31,6 @@ public class TarefaRequest {
     private LocalTime horaInicio;
 
     private Integer duracao;
+
+    private Integer metaDiaria;
 }

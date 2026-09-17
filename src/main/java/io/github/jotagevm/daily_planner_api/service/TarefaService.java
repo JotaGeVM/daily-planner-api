@@ -10,6 +10,7 @@ import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
 import io.github.jotagevm.daily_planner_api.exception.CategoriaNaoEncontrada;
 import io.github.jotagevm.daily_planner_api.exception.DiasSemanaObrigatorio;
 import io.github.jotagevm.daily_planner_api.exception.HorarioObrigatorio;
+import io.github.jotagevm.daily_planner_api.exception.MetaDiariaObrigatoria;
 import io.github.jotagevm.daily_planner_api.exception.TarefaNaoEncontrada;
 import io.github.jotagevm.daily_planner_api.model.Categoria;
 import io.github.jotagevm.daily_planner_api.model.Recorrencia;
@@ -48,9 +49,14 @@ public class TarefaService {
             tarefa.setDiasSemana(dto.getDiasSemana());
         }
         if (dto.getTipo() == TipoTarefa.EVENTO && dto.getHoraInicio() == null) {
-            throw new HorarioObrigatorio("Horário de início obrigatório para tarefa do tipo evento");
+            throw new HorarioObrigatorio("Horário de início obrigatório para evento");
         } else {
             tarefa.setHoraInicio(dto.getHoraInicio());
+        }
+        if (dto.getTipo() == TipoTarefa.HABITO && dto.getMetaDiaria() == null) {
+            throw new MetaDiariaObrigatoria("Meta diária obrigatória para hábito");
+        } else {
+            tarefa.setMetaDiaria(dto.getMetaDiaria());
         }
         tarefa.setDuracao(dto.getDuracao());
     }
@@ -67,6 +73,7 @@ public class TarefaService {
         dto.setDiasSemana(tarefa.getDiasSemana());
         dto.setHoraInicio(tarefa.getHoraInicio());
         dto.setDuracao(tarefa.getDuracao());
+        dto.setMetaDiaria(tarefa.getMetaDiaria());
 
         return dto;
     }
