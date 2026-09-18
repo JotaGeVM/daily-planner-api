@@ -31,6 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### META-INF ###
+src/main/resources/META-INF/
+
 # Compiled class file
 *.class
 

@@ -1,189 +1,165 @@
-# 🗓️ Daily Planner API
+# 📅 Daily Planner API
 
-Sistema de planejamento de tarefas diárias desenvolvido com **Spring Boot** e **PostgreSQL**, com CRUD completo de tarefas, categorias e um modelo de conclusão baseado em ocorrências.
+API REST para organização de tarefas, hábitos e categorias, com autenticação multiusuário, recorrência de tarefas, cálculo de streaks e visão de calendário.
 
-Projeto de portfólio, desenvolvido com foco em boas práticas de arquitetura backend: separação em camadas, tratamento de exceções centralizado, DTOs e validação de dados.
+Projeto backend de um sistema full stack (Daily Planner), construído para consolidar prática em Spring Boot, persistência com PostgreSQL, autenticação stateless com JWT e testes automatizados.
 
-Frontend deste projeto: [daily-planner-web](https://github.com/JotaGeVM/daily-planner-web)
+Repositório do frontend: [daily-planner-web](https://github.com/jotagevm/daily-planner-web)
 
----
+Aplicação em produção: `https://daily-planner-web-sandy.vercel.app`
 
-## 🚀 Tecnologias utilizadas
+## 🛠️ Tecnologias
 
-- **Java 25**
-- **Spring Boot 4.1**
-  - Spring Web
-  - Spring Data JPA
-  - Bean Validation
-- **PostgreSQL**
-- **Maven** (com Maven Toolchains, para build reprodutível independente do `JAVA_HOME` da máquina)
-- **Lombok**
-- **H2** (banco em memória para testes)
-
----
+- Java 25
+- Spring Boot 4.1
+- Spring Data JPA
+- Spring Security
+- JWT (JJWT 0.13)
+- PostgreSQL (Neon em produção)
+- H2 (banco em memória para testes)
+- Flyway (versionamento de schema)
+- Bean Validation
+- JUnit 5 e Mockito
+- Maven (com plugin de Toolchains para isolar a JDK do projeto)
+- Docker (imagem usada no deploy)
 
 ## ✨ Funcionalidades
 
-- CRUD completo de **Tarefas**, com suporte a recorrência (`NENHUMA`, `DIARIA`, `SEMANAL`, `QUINZENAL`, `MENSAL`), tipo (`EVENTO` ou `TAREFA`), dias da semana, horário e duração
-- CRUD completo de **Categorias**, com cor de identificação (hexadecimal) e descrição opcional
-- Uma categoria não pode ser removida enquanto houver tarefas vinculadas a ela
-- **Ocorrências**: registro de conclusão de uma tarefa em um momento específico (`dataHora`). A existência do registro já representa a conclusão — não há um campo de status booleano separado
-- Validação de dados de entrada (Bean Validation)
-- Tratamento de erros centralizado, com respostas padronizadas em JSON
-- CORS configurado para aceitar requisições do frontend
+### 🔐 Autenticação e multiusuário
 
----
+- Cadastro e login com senha criptografada (BCrypt) e emissão de token JWT.
+- Todas as rotas de tarefas, categorias e ocorrências exigem token válido.
+- Cada usuário só enxerga e manipula os próprios dados. O isolamento é feito por `usuario_id` em nível de banco e de consulta (`findByIdAndUsuarioId`), de forma que um usuário nunca recebe sequer a confirmação de que um registro de outro usuário existe.
 
-## 🗂️ Estrutura do projeto
+### 📋 Tarefas, categorias e ocorrências
 
-```
+- CRUD completo de tarefas e categorias.
+- Categorias com cor associada, usadas para identificação visual no frontend.
+- Ocorrências representam o registro de que uma tarefa foi realizada em um momento específico.
+- Exclusão de categoria em uso por alguma tarefa é bloqueada.
+
+### 🔥 Hábitos
+
+Tarefas podem ser de três tipos: tarefa única, tarefa recorrente ou hábito.
+
+- Hábitos têm uma meta diária (`metaDiaria`), representando quantas vezes a ação deve ser repetida no dia.
+- Cada marcação de progresso gera uma ocorrência; ao atingir a meta do dia, o hábito é considerado cumprido.
+- Cálculo de streak (sequência de dias cumpridos consecutivos) e melhor streak histórica, calculados sob demanda a partir das ocorrências existentes, sem campo persistido.
+
+### 🗓️ Recorrência e calendário
+
+- Tarefas recorrentes suportam os padrões diário, semanal (dias da semana específicos), quinzenal (dias da semana em semanas alternadas) e mensal (mesmo dia do mês, com ajuste para meses mais curtos).
+- Endpoint de calendário que expande a recorrência de todas as tarefas do usuário em um intervalo de datas, usado pelas visões de semana e mês do frontend.
+- Endpoint de "hoje" reaproveita a mesma expansão para montar a lista do dia atual.
+
+### 📄 Paginação e ordenação
+
+- Listagens de tarefas, categorias e ocorrências são paginadas (`Page`), com suporte a ordenação por parâmetro de query.
+- Evita carregar coleções inteiras em memória à medida que os dados do usuário crescem.
+
+### ✅ Qualidade e infraestrutura
+
+- Migrações de schema controladas via Flyway (`V1` a `V6`), aplicadas automaticamente na inicialização.
+- Suíte de testes unitários com JUnit 5 e Mockito, cobrindo os serviços de tarefas, categorias, ocorrências e o serviço de expansão de recorrência.
+- Perfil de teste isolado com H2, sem depender de um banco PostgreSQL local.
+- Tratamento de erros centralizado com `GlobalExceptionHandler`, retornando respostas consistentes para validação, recursos não encontrados e conflitos.
+
+## 📂 Estrutura do projeto
+
 src/main/java/io/github/jotagevm/daily_planner_api/
-├── controller/     # Endpoints REST
-├── service/        # Regras de negócio
-├── repository/     # Acesso a dados (Spring Data JPA)
-├── model/          # Entidades JPA
-├── dto/            # Objetos de entrada e saída da API
-├── config/         # Configurações (CORS)
-└── exception/      # Exceções customizadas e tratamento global de erros
-```
+├── config/ Configuração de segurança, CORS e filtro de autenticação JWT
+├── controller/ Endpoints REST
+├── dto/ Objetos de request e response
+├── exception/ Exceções de domínio e handler global
+├── model/ Entidades JPA
+├── repository/ Interfaces Spring Data JPA
+└── service/ Regras de negócio
 
----
+src/main/resources/
+├── db/migration/ Scripts Flyway (V1 a V6)
+└── application.properties
 
-## ⚙️ Como rodar o projeto localmente
+src/test/java/... Testes unitários de serviço
+src/test/resources/ application.properties do perfil de teste (H2)
 
-### Pré-requisitos
+## 🚀 Como rodar localmente
 
-- JDK 25 (o projeto usa Maven Toolchains — tenha o JDK 25 instalado e declarado em `~/.m2/toolchains.xml`)
-- PostgreSQL instalado e rodando
-- Maven (ou use o Maven Wrapper incluído no projeto, `./mvnw`)
+Pré-requisitos: JDK 25, Maven, PostgreSQL (ou usar apenas o perfil de teste com H2).
 
-### 1. Clone o repositório
+1. Clone o repositório.
+2. Configure as variáveis de ambiente:
+   - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`: conexão com o PostgreSQL.
+   - `JWT_SECRET`: chave usada para assinar os tokens. Precisa ter pelo menos 256 bits (32 caracteres, recomendado gerar uma string aleatória maior).
+3. Rode a aplicação:
+   ./mvnw spring-boot:run
 
-```bash
-git clone https://github.com/JotaGeVM/daily-planner-api.git
-cd daily-planner-api
-```
+As migrações do Flyway são aplicadas automaticamente na primeira execução.
 
-### 2. Crie o banco de dados
+Para rodar os testes:
+./mvnw test
 
-No PostgreSQL (via pgAdmin ou terminal), crie um banco chamado `daily_planner_db`:
+O perfil de teste usa H2 em memória e não depende de um banco PostgreSQL disponível.
 
-```sql
-CREATE DATABASE daily_planner_db;
-```
+## 🔌 Endpoints
 
-As tabelas são criadas/atualizadas automaticamente pelo Hibernate (`ddl-auto=update`).
+### Autenticação
 
-### 3. Configure as variáveis de ambiente
-
-O projeto lê as credenciais do banco através de variáveis de ambiente, definidas em `src/main/resources/application.properties`:
-
-```properties
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-```
-
-Configure `DB_USERNAME` e `DB_PASSWORD` no seu ambiente antes de rodar a aplicação (por exemplo, na configuração de execução da sua IDE, ou exportando as variáveis no terminal).
-
-### 4. Rode a aplicação
-
-```bash
-./mvnw spring-boot:run
-```
-
-A API estará disponível em `http://localhost:8080`.
-
----
-
-## 📌 Endpoints da API
-
-### Tarefas
-
-| Método | Rota            | Descrição                     |
-| ------ | --------------- | ----------------------------- |
-| GET    | `/tarefas`      | Lista todas as tarefas        |
-| GET    | `/tarefas/{id}` | Busca uma tarefa pelo ID      |
-| POST   | `/tarefas`      | Cadastra uma nova tarefa      |
-| PUT    | `/tarefas/{id}` | Atualiza uma tarefa existente |
-| DELETE | `/tarefas/{id}` | Remove uma tarefa             |
+| Método | Rota              | Descrição                        |
+| ------ | ----------------- | -------------------------------- |
+| POST   | `/auth/registrar` | Cria um novo usuário             |
+| POST   | `/auth/login`     | Autentica e retorna um token JWT |
 
 ### Categorias
 
-| Método | Rota               | Descrição                                    |
-| ------ | ------------------ | -------------------------------------------- |
-| GET    | `/categorias`      | Lista todas as categorias                    |
-| GET    | `/categorias/{id}` | Busca uma categoria pelo ID                  |
-| POST   | `/categorias`      | Cadastra uma nova categoria                  |
-| PUT    | `/categorias/{id}` | Atualiza uma categoria existente             |
-| DELETE | `/categorias/{id}` | Remove uma categoria (se não estiver em uso) |
+| Método | Rota               | Descrição                                |
+| ------ | ------------------ | ---------------------------------------- |
+| GET    | `/categorias`      | Lista categorias do usuário (paginado)   |
+| GET    | `/categorias/{id}` | Busca categoria por id                   |
+| POST   | `/categorias`      | Cria categoria                           |
+| PUT    | `/categorias/{id}` | Atualiza categoria                       |
+| DELETE | `/categorias/{id}` | Remove categoria (se não estiver em uso) |
+
+### Tarefas
+
+| Método | Rota                               | Descrição                                                           |
+| ------ | ---------------------------------- | ------------------------------------------------------------------- |
+| GET    | `/tarefas`                         | Lista tarefas do usuário (paginado)                                 |
+| GET    | `/tarefas/{id}`                    | Busca tarefa por id                                                 |
+| POST   | `/tarefas`                         | Cria tarefa (única, recorrente ou hábito)                           |
+| PUT    | `/tarefas/{id}`                    | Atualiza tarefa                                                     |
+| DELETE | `/tarefas/{id}`                    | Remove tarefa                                                       |
+| GET    | `/tarefas/{id}/streak`             | Retorna streak atual e melhor streak de um hábito                   |
+| GET    | `/tarefas/calendario?inicio=&fim=` | Expande a recorrência das tarefas do usuário no intervalo informado |
 
 ### Ocorrências
 
-| Método | Rota                       | Descrição                          |
-| ------ | -------------------------- | ---------------------------------- |
-| GET    | `/ocorrencias`             | Lista todas as ocorrências         |
-| GET    | `/ocorrencias/tarefa/{id}` | Lista as ocorrências de uma tarefa |
-| POST   | `/ocorrencias`             | Registra a conclusão de uma tarefa |
-| DELETE | `/ocorrencias/{id}`        | Remove um registro de conclusão    |
+| Método | Rota                | Descrição                               |
+| ------ | ------------------- | --------------------------------------- |
+| GET    | `/ocorrencias`      | Lista ocorrências do usuário (paginado) |
+| POST   | `/ocorrencias`      | Registra uma ocorrência para uma tarefa |
+| DELETE | `/ocorrencias/{id}` | Remove uma ocorrência                   |
 
----
+Todas as rotas acima, exceto as de autenticação, exigem o header `Authorization: Bearer <token>`.
 
-## 🛡️ Tratamento de erros
+## ⚠️ Tratamento de erros
 
-A API centraliza o tratamento de exceções através de um `GlobalExceptionHandler`, devolvendo respostas padronizadas nesse formato:
+Erros de validação, recursos não encontrados e conflitos de negócio (por exemplo, categoria duplicada ou em uso) são capturados pelo `GlobalExceptionHandler` e retornados em um formato consistente, com status HTTP apropriado e mensagem descritiva.
 
-```json
-{
-  "status": 409,
-  "mensagem": "Categoria com nome 'Trabalho' já cadastrada",
-  "timestamp": "2026-09-13T18:39:36.545"
-}
-```
+## ☁️ Deploy
 
-Erros de validação de campo retornam um formato próprio, campo → mensagem:
+A aplicação roda em container Docker no Render, com o banco PostgreSQL hospedado no Neon. O deploy é automático a cada push na branch principal.
 
-```json
-{
-  "nome": "não deve estar em branco"
-}
-```
+## ✅ Melhorias implementadas ao longo do projeto
 
-Principais cenários tratados:
-
-- **404** — tarefa, categoria ou ocorrência não encontrada
-- **409** — categoria com nome duplicado, ou categoria em uso (possui tarefas vinculadas)
-- **400** — falha de validação nos dados de entrada, ou corpo da requisição malformado
-
----
-
-## 🧪 Testes
-
-A API foi testada manualmente via **Insomnia** e **Postman**, cobrindo os fluxos principais (CRUD das três entidades) e os cenários de erro (validação, nome duplicado, recurso não encontrado, categoria em uso, dados órfãos).
-
----
-
-## ✅ Melhorias implementadas
-
-- Consolidação do modelo de `Ocorrencia`: `data` + `horaConclusao` unificados em um único campo `dataHora`; campo booleano `concluida` removido — a existência do registro passou a representar a conclusão
-- Adição de descrição opcional em `Categoria`
-- Configuração de CORS para o frontend
-- Correção de dependências Maven inválidas no `pom.xml` e configuração de toolchain para build reprodutível em JDK 25
-- Tratamento de erros refinado, incluindo respostas estruturadas por campo para erros de validação
-
----
+- Migração de schema controlada via Flyway.
+- Suíte de testes automatizados de serviço.
+- Autenticação JWT com isolamento de dados por usuário.
+- Paginação e ordenação nas listagens.
+- Tipo de tarefa "hábito", com meta diária e cálculo de streak.
+- Recorrência de tarefas (diária, semanal, quinzenal, mensal) e endpoint de calendário.
 
 ## 🔭 Próximos passos
 
-- Override de `horaInicio` por ocorrência individual
-- Recorrência completa baseada em RRULE
-- Autenticação (Spring Security + JWT)
-- Testes automatizados com JUnit + Mockito
-- Migrations versionadas com Flyway ou Liquibase, em vez de `ddl-auto=update`
-- Paginação e ordenação nos endpoints de listagem
-- Deploy — colocar a aplicação no ar, com o PostgreSQL também em nuvem
-
----
-
-## 👤 Autor
-
-Desenvolvido por **João Gustavo** ([@JotaGeVM](https://github.com/JotaGeVM)) como projeto de portfólio.
+- Suporte a padrões de recorrência mais flexíveis, no estilo RRULE (intervalos arbitrários, datas de término, exceções).
+- Permitir que uma ocorrência individual sobrescreva o horário definido na tarefa recorrente.
+- Revisitar a modelagem de `Tarefa` para separar melhor os três tipos (única, recorrente, hábito), hoje representados na mesma entidade.
