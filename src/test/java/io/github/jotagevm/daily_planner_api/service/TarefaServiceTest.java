@@ -17,7 +17,6 @@ import io.github.jotagevm.daily_planner_api.model.*;
 import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
 import io.github.jotagevm.daily_planner_api.repository.OcorrenciaRepository;
 import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
-import io.github.jotagevm.daily_planner_api.repository.OcorrenciaRepository;
 import io.github.jotagevm.daily_planner_api.dto.HabitoStreakResponse;
 
 import org.springframework.data.domain.Page;
@@ -50,6 +49,8 @@ class TarefaServiceTest {
     private TarefaService tarefaService;
     @Mock
     private OcorrenciaRepository ocorrenciaRepository;
+    @Mock
+    private RecorrenciaService recorrenciaService;
 
     private Usuario usuarioFake() {
         Usuario usuario = new Usuario();

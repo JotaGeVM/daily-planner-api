@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.HashMap;
 
 import org.springframework.stereotype.Service;
 
@@ -30,20 +31,24 @@ import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
 import io.github.jotagevm.daily_planner_api.dto.HabitoStreakResponse;
 import io.github.jotagevm.daily_planner_api.model.Ocorrencia;
 import io.github.jotagevm.daily_planner_api.repository.OcorrenciaRepository;
+import io.github.jotagevm.daily_planner_api.dto.CalendarioDiaResponse;
 
 @Service
 public class TarefaService {
+    private final RecorrenciaService recorrenciaService;
     private final OcorrenciaRepository ocorrenciaRepository;
     private final TarefaRepository tarefaRepository;
     private final CategoriaRepository categoriaRepository;
     private final UsuarioAtualProvider usuarioAtualProvider;
 
     public TarefaService(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository,
-            UsuarioAtualProvider usuarioAtualProvider, OcorrenciaRepository ocorrenciaRepository) {
+            UsuarioAtualProvider usuarioAtualProvider, OcorrenciaRepository ocorrenciaRepository,
+            RecorrenciaService recorrenciaService) {
         this.tarefaRepository = tarefaRepository;
         this.categoriaRepository = categoriaRepository;
         this.usuarioAtualProvider = usuarioAtualProvider;
         this.ocorrenciaRepository = ocorrenciaRepository;
+        this.recorrenciaService = recorrenciaService;
     }
 
     private void preencherCampos(Tarefa tarefa, TarefaRequest dto, Long usuarioId) {
@@ -71,6 +76,7 @@ public class TarefaService {
         } else {
             tarefa.setMetaDiaria(dto.getMetaDiaria());
         }
+        tarefa.setDataInicio(dto.getDataInicio());
         tarefa.setDuracao(dto.getDuracao());
     }
 
@@ -88,6 +94,7 @@ public class TarefaService {
         dto.setDuracao(tarefa.getDuracao());
         dto.setMetaDiaria(tarefa.getMetaDiaria());
         dto.setCategoriaCorHex(tarefa.getCategoria().getCorHex());
+        dto.setDataInicio(tarefa.getDataInicio());
 
         return dto;
     }
@@ -168,5 +175,29 @@ public class TarefaService {
         }
 
         return new HabitoStreakResponse(streakAtual, melhorStreak);
+    }
+
+    public List<CalendarioDiaResponse> calcularCalendario(LocalDate inicio, LocalDate fim) {
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        List<Tarefa> tarefas = tarefaRepository.findByUsuarioIdAndTipoNot(usuarioId, TipoTarefa.HABITO);
+
+        Map<LocalDate, List<TarefaResponse>> mapa = new HashMap<>();
+        for (LocalDate dia = inicio; !dia.isAfter(fim); dia = dia.plusDays(1)) {
+            mapa.put(dia, new ArrayList<>());
+        }
+
+        for (Tarefa tarefa : tarefas) {
+            List<LocalDate> datas = recorrenciaService.expandir(tarefa, inicio, fim);
+            TarefaResponse dto = converterDto(tarefa);
+            for (LocalDate data : datas) {
+                mapa.get(data).add(dto);
+            }
+        }
+
+        List<CalendarioDiaResponse> resultado = new ArrayList<>();
+        for (LocalDate dia = inicio; !dia.isAfter(fim); dia = dia.plusDays(1)) {
+            resultado.add(new CalendarioDiaResponse(dia, mapa.get(dia)));
+        }
+        return resultado;
     }
 }

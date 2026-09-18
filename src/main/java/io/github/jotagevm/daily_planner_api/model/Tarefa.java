@@ -1,6 +1,7 @@
 package io.github.jotagevm.daily_planner_api.model;
 
 import java.time.LocalTime;
+import java.time.LocalDate;
 
 import jakarta.persistence.*;
 
@@ -41,6 +42,8 @@ public class Tarefa {
     private Integer duracao;
 
     private Integer metaDiaria;
+
+    private LocalDate dataInicio;
 
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)

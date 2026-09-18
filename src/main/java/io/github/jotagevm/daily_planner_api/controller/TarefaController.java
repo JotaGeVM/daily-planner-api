@@ -1,5 +1,11 @@
 package io.github.jotagevm.daily_planner_api.controller;
 
+import java.time.LocalDate;
+
+import java.util.List;
+
+import org.springframework.format.annotation.DateTimeFormat;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -8,6 +14,7 @@ import io.github.jotagevm.daily_planner_api.dto.HabitoStreakResponse;
 import io.github.jotagevm.daily_planner_api.dto.TarefaRequest;
 import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
 import io.github.jotagevm.daily_planner_api.service.TarefaService;
+import io.github.jotagevm.daily_planner_api.dto.CalendarioDiaResponse;
 
 import jakarta.validation.Valid;
 
@@ -20,8 +27,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/tarefas")
@@ -66,5 +73,12 @@ public class TarefaController {
     @GetMapping("/{id}/streak")
     public ResponseEntity<HabitoStreakResponse> streak(@PathVariable Long id) {
         return ResponseEntity.ok(tarefaService.calcularStreak(id));
+    }
+
+    @GetMapping("/calendario")
+    public List<CalendarioDiaResponse> calendario(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim) {
+        return tarefaService.calcularCalendario(inicio, fim);
     }
 }

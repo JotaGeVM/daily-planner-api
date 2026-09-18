@@ -1,6 +1,7 @@
 package io.github.jotagevm.daily_planner_api.dto;
 
 import java.time.LocalTime;
+import java.time.LocalDate;
 
 import io.github.jotagevm.daily_planner_api.model.Recorrencia;
 import io.github.jotagevm.daily_planner_api.model.TipoTarefa;
@@ -29,6 +30,9 @@ public class TarefaRequest {
     private String diasSemana;
 
     private LocalTime horaInicio;
+
+    @NotNull
+    private LocalDate dataInicio;
 
     private Integer duracao;
 
