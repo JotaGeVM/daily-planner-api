@@ -2,9 +2,11 @@ package io.github.jotagevm.daily_planner_api.service;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import io.github.jotagevm.daily_planner_api.dto.TarefaRequest;
 import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
 import io.github.jotagevm.daily_planner_api.exception.CategoriaNaoEncontrada;
@@ -13,16 +15,25 @@ import io.github.jotagevm.daily_planner_api.exception.HorarioObrigatorio;
 import io.github.jotagevm.daily_planner_api.exception.TarefaNaoEncontrada;
 import io.github.jotagevm.daily_planner_api.model.*;
 import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
+import io.github.jotagevm.daily_planner_api.repository.OcorrenciaRepository;
 import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
+import io.github.jotagevm.daily_planner_api.repository.OcorrenciaRepository;
+import io.github.jotagevm.daily_planner_api.dto.HabitoStreakResponse;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+
 import java.util.List;
 import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -37,6 +48,8 @@ class TarefaServiceTest {
     private UsuarioAtualProvider usuarioAtualProvider;
     @InjectMocks
     private TarefaService tarefaService;
+    @Mock
+    private OcorrenciaRepository ocorrenciaRepository;
 
     private Usuario usuarioFake() {
         Usuario usuario = new Usuario();
@@ -197,5 +210,94 @@ class TarefaServiceTest {
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
         TarefaResponse resultado = tarefaService.salvar(request);
         assertThat(resultado.getHoraInicio()).isEqualTo(LocalTime.of(14, 30));
+    }
+
+    @Test
+    void streakDeTarefaQueNaoEhHabito() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        Tarefa tarefa = new Tarefa();
+        tarefa.setId(1L);
+        tarefa.setTipo(TipoTarefa.TAREFA);
+        when(tarefaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(tarefa));
+
+        HabitoStreakResponse resultado = tarefaService.calcularStreak(1L);
+
+        assertThat(resultado.getStreakAtual()).isEqualTo(0);
+        assertThat(resultado.getMelhorStreak()).isEqualTo(0);
+    }
+
+    @Test
+    void streakSemNenhumaOcorrencia() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        Tarefa tarefa = new Tarefa();
+        tarefa.setId(1L);
+        tarefa.setTipo(TipoTarefa.HABITO);
+        tarefa.setMetaDiaria(3);
+        when(tarefaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(tarefa));
+        when(ocorrenciaRepository.findByTarefaIdAndTarefa_UsuarioId(1L, 1L)).thenReturn(List.of());
+
+        HabitoStreakResponse resultado = tarefaService.calcularStreak(1L);
+
+        assertThat(resultado.getStreakAtual()).isEqualTo(0);
+        assertThat(resultado.getMelhorStreak()).isEqualTo(0);
+    }
+
+    @Test
+    void streakAtualDeTresDiasConsecutivosAteHoje() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        Tarefa tarefa = new Tarefa();
+        tarefa.setId(1L);
+        tarefa.setTipo(TipoTarefa.HABITO);
+        tarefa.setMetaDiaria(2);
+        when(tarefaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(tarefa));
+
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        List<Ocorrencia> ocorrencias = new java.util.ArrayList<>();
+        for (int diasAtras = 0; diasAtras < 3; diasAtras++) {
+            java.time.LocalDate dia = hoje.minusDays(diasAtras);
+            for (int i = 0; i < 2; i++) {
+                Ocorrencia o = new Ocorrencia();
+                o.setDataHora(LocalDateTime.of(dia, java.time.LocalTime.of(10, i)));
+                ocorrencias.add(o);
+            }
+        }
+        when(ocorrenciaRepository.findByTarefaIdAndTarefa_UsuarioId(1L, 1L)).thenReturn(ocorrencias);
+
+        HabitoStreakResponse resultado = tarefaService.calcularStreak(1L);
+
+        assertThat(resultado.getStreakAtual()).isEqualTo(3);
+        assertThat(resultado.getMelhorStreak()).isEqualTo(3);
+    }
+
+    @Test
+    void melhorStreakMaiorQueOAtualQuandoSequenciaFoiQuebrada() {
+        when(usuarioAtualProvider.obterUsuarioAtual()).thenReturn(usuarioFake());
+        Tarefa tarefa = new Tarefa();
+        tarefa.setId(1L);
+        tarefa.setTipo(TipoTarefa.HABITO);
+        tarefa.setMetaDiaria(1);
+        when(tarefaRepository.findByIdAndUsuarioId(1L, 1L)).thenReturn(Optional.of(tarefa));
+
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        List<Ocorrencia> ocorrencias = new java.util.ArrayList<>();
+        // sequência antiga de 5 dias, de 10 a 6 dias atrás (quebrada, não chega até
+        // hoje)
+        for (int diasAtras = 10; diasAtras >= 6; diasAtras--) {
+            Ocorrencia o = new Ocorrencia();
+            o.setDataHora(LocalDateTime.of(hoje.minusDays(diasAtras), java.time.LocalTime.of(10, 0)));
+            ocorrencias.add(o);
+        }
+        // sequência atual de só 2 dias, terminando hoje
+        for (int diasAtras = 1; diasAtras >= 0; diasAtras--) {
+            Ocorrencia o = new Ocorrencia();
+            o.setDataHora(LocalDateTime.of(hoje.minusDays(diasAtras), java.time.LocalTime.of(10, 0)));
+            ocorrencias.add(o);
+        }
+        when(ocorrenciaRepository.findByTarefaIdAndTarefa_UsuarioId(1L, 1L)).thenReturn(ocorrencias);
+
+        HabitoStreakResponse resultado = tarefaService.calcularStreak(1L);
+
+        assertThat(resultado.getStreakAtual()).isEqualTo(2);
+        assertThat(resultado.getMelhorStreak()).isEqualTo(5);
     }
 }

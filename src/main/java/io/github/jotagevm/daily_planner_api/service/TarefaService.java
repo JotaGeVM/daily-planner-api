@@ -1,5 +1,13 @@
 package io.github.jotagevm.daily_planner_api.service;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Page;
@@ -19,18 +27,23 @@ import io.github.jotagevm.daily_planner_api.model.TipoTarefa;
 import io.github.jotagevm.daily_planner_api.model.Usuario;
 import io.github.jotagevm.daily_planner_api.repository.CategoriaRepository;
 import io.github.jotagevm.daily_planner_api.repository.TarefaRepository;
+import io.github.jotagevm.daily_planner_api.dto.HabitoStreakResponse;
+import io.github.jotagevm.daily_planner_api.model.Ocorrencia;
+import io.github.jotagevm.daily_planner_api.repository.OcorrenciaRepository;
 
 @Service
 public class TarefaService {
+    private final OcorrenciaRepository ocorrenciaRepository;
     private final TarefaRepository tarefaRepository;
     private final CategoriaRepository categoriaRepository;
     private final UsuarioAtualProvider usuarioAtualProvider;
 
     public TarefaService(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository,
-            UsuarioAtualProvider usuarioAtualProvider) {
+            UsuarioAtualProvider usuarioAtualProvider, OcorrenciaRepository ocorrenciaRepository) {
         this.tarefaRepository = tarefaRepository;
         this.categoriaRepository = categoriaRepository;
         this.usuarioAtualProvider = usuarioAtualProvider;
+        this.ocorrenciaRepository = ocorrenciaRepository;
     }
 
     private void preencherCampos(Tarefa tarefa, TarefaRequest dto, Long usuarioId) {
@@ -74,6 +87,7 @@ public class TarefaService {
         dto.setHoraInicio(tarefa.getHoraInicio());
         dto.setDuracao(tarefa.getDuracao());
         dto.setMetaDiaria(tarefa.getMetaDiaria());
+        dto.setCategoriaCorHex(tarefa.getCategoria().getCorHex());
 
         return dto;
     }
@@ -113,5 +127,46 @@ public class TarefaService {
         tarefaRepository.findByIdAndUsuarioId(id, usuarioId)
                 .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
         tarefaRepository.deleteById(id);
+    }
+
+    public HabitoStreakResponse calcularStreak(Long id) {
+        Long usuarioId = usuarioAtualProvider.obterUsuarioAtual().getId();
+        Tarefa tarefa = tarefaRepository.findByIdAndUsuarioId(id, usuarioId)
+                .orElseThrow(() -> new TarefaNaoEncontrada("Tarefa de ID " + id + " não encontrada"));
+
+        if (tarefa.getTipo() != TipoTarefa.HABITO || tarefa.getMetaDiaria() == null) {
+            return new HabitoStreakResponse(0, 0);
+        }
+
+        List<Ocorrencia> ocorrencias = ocorrenciaRepository.findByTarefaIdAndTarefa_UsuarioId(id, usuarioId);
+
+        Map<LocalDate, Long> contagemPorDia = ocorrencias.stream()
+                .collect(Collectors.groupingBy(o -> o.getDataHora().toLocalDate(), Collectors.counting()));
+
+        Set<LocalDate> diasCumpridos = contagemPorDia.entrySet().stream()
+                .filter(entry -> entry.getValue() >= tarefa.getMetaDiaria())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        LocalDate hoje = LocalDate.now();
+        LocalDate cursor = diasCumpridos.contains(hoje) ? hoje : hoje.minusDays(1);
+        int streakAtual = 0;
+        while (diasCumpridos.contains(cursor)) {
+            streakAtual++;
+            cursor = cursor.minusDays(1);
+        }
+
+        List<LocalDate> diasOrdenados = new ArrayList<>(diasCumpridos);
+        Collections.sort(diasOrdenados);
+        int melhorStreak = 0;
+        int atual = 0;
+        LocalDate anterior = null;
+        for (LocalDate dia : diasOrdenados) {
+            atual = (anterior != null && dia.equals(anterior.plusDays(1))) ? atual + 1 : 1;
+            melhorStreak = Math.max(melhorStreak, atual);
+            anterior = dia;
+        }
+
+        return new HabitoStreakResponse(streakAtual, melhorStreak);
     }
 }

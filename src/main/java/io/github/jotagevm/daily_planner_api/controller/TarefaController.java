@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 
+import io.github.jotagevm.daily_planner_api.dto.HabitoStreakResponse;
 import io.github.jotagevm.daily_planner_api.dto.TarefaRequest;
 import io.github.jotagevm.daily_planner_api.dto.TarefaResponse;
 import io.github.jotagevm.daily_planner_api.service.TarefaService;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/tarefas")
@@ -59,5 +61,10 @@ public class TarefaController {
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         tarefaService.deletar(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/streak")
+    public ResponseEntity<HabitoStreakResponse> streak(@PathVariable Long id) {
+        return ResponseEntity.ok(tarefaService.calcularStreak(id));
     }
 }

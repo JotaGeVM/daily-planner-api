@@ -14,6 +14,7 @@ public class TarefaResponse {
     private String descricao;
     private Long categoriaId;
     private String categoriaNome;
+    private String categoriaCorHex;
     private TipoTarefa tipo;
     private Recorrencia recorrencia;
     private String diasSemana;
